@@ -1,0 +1,102 @@
+.main-container{
+    display : flex;
+    flex-direction: column;
+    width : 100vw;
+    height : 100vh;
+}
+.main-header{
+    flex : 0 0 10%;
+    background-color: rgb(238, 202, 213);
+    display : flex;
+    align-items : center;
+    justify-content : center;
+    color : white;
+}
+.main-body{
+    flex : 1;
+    background-color: yellow;
+    flex-direction: row;
+    display: flex;
+}
+
+.main-map{
+    margin-top:auto;
+    margin-bottom:auto;
+    margin-left : 3%;
+    margin-right : 3%;
+    width : 60%;
+    height : 60vh;
+    background-color : green;
+}
+
+.main-content{
+    margin-top:auto;
+    margin-bottom:auto;
+    margin-right : 3%;
+    width : 30%;
+    height : 60vh;
+    background-color : skyblue;
+
+}
+
+.main-content-filter{
+    flex-direction: row;
+    display : flex;
+    align-items : center;
+    justify-content : center;
+    height : 10vh;
+    background-color : orange;
+}
+
+.main-content-place{
+    height : 47vh;
+    flex-direction: column;
+    display : flex;
+    align-items : flex-start;
+    justify-content : flex-start;
+    padding : 10px;
+    overflow-y:auto;
+    border-radius : 10px;
+}
+
+.place-item-button {
+    display : block;
+    text-align: left;
+    width: 100%;
+    margin-bottom: 15px;
+    padding: 15px;
+    background: white;
+    border : none;
+    border-radius: 9px;
+    cursor : pointer;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.place-item h3 {
+    font-size: 1.2rem;
+    margin-bottom: 5px;
+}
+
+.place-item p {
+    margin: 3px 0;
+    font-size: 0.9rem;
+}
+
+.main-footer{
+    background-color: pink;
+}
+
+.logout-button{
+    width: 10%;
+    padding: 10px 20px;
+    margin-left: 3%;
+    border: none;
+    border-radius: 5px;
+    background-color: black;
+    color: #fff;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    font-size: 10px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
