@@ -2,15 +2,17 @@ import React, { useEffect, useState } from "react";
 import KakaoMap from "./KakaoMap"; // Import the KakaoMap component
 import axios from "axios";
 import "./MainPage.css";
+import useGeolocation from "./hooks/useGeolocation";
 
 function MainPage({ loggedInUser, handleLogout }) {
   const [places, setPlaces] = useState([]);
   const [page, setPage] = useState(1);
   const [isFetching, setIsFetching] = useState(false);
   const [selectedPosition, setSelectedPosition] = useState({
-    pos_x: 33.450701,
-    pos_y: 126.570667,
+    latitude: 33.450701,
+    longitude: 126.570667,
   });
+  const location = useGeolocation();
 
   const fetchData = async () => {
     try {
@@ -18,7 +20,27 @@ function MainPage({ loggedInUser, handleLogout }) {
         `http://ec2-13-125-211-97.ap-northeast-2.compute.amazonaws.com:5000/places/?order=desc&page_size=100&page=${page}&size=50`
       );
       const data = await response.data.items;
-      setPlaces((prevPlaces) => [...prevPlaces, ...data]); // 이전 데이터에 새로운 데이터들을 계속해서 추가해나감(무한 스크롤 방식)
+      const result = await Promise.all(
+        data.map(async (item) => {
+          const naverScore = item.naver_info?.score;
+          const kakaoScore = item.kakao_info?.score;
+
+          const averageScore =
+            naverScore && kakaoScore
+              ? (naverScore + kakaoScore) / 2
+              : naverScore || kakaoScore || null;
+
+          return {
+            name: item.basic_info.name,
+            address: item.basic_info.address,
+            latitude: item.basic_info.LatLng.latitude,
+            longitude: item.basic_info.LatLng.longitude,
+            score: averageScore,
+            review_count: item.kakao_info?.review_count || 0,
+          };
+        })
+      );
+      setPlaces((prevPlaces) => [...prevPlaces, ...result]); // 이전 데이터에 새로운 데이터들을 계속해서 추가해나감(무한 스크롤 방식)
       setIsFetching(false);
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -50,7 +72,7 @@ function MainPage({ loggedInUser, handleLogout }) {
   }, [isFetching]);
 
   const handleClick = (x, y) => {
-    setSelectedPosition({ pos_x: x, pos_y: y });
+    setSelectedPosition({ latitude: x, longitude: y });
   };
 
   return (
@@ -58,7 +80,19 @@ function MainPage({ loggedInUser, handleLogout }) {
       <div className="main-header">
         {loggedInUser ? ( // loggedInUser가 있을 때만 렌더링
           <>
-            <h2>안녕하세요, {loggedInUser.id}님!</h2>
+            <h2>안녕하세요, {loggedInUser.email}님!</h2>
+            {location.loaded ? (
+              location.error ? (
+                <div>Error: {location.error.message}</div>
+              ) : (
+                <div>
+                  사용자의 위도 : {location.coordinates.lat} <br />
+                  사용자의 경도 : {location.coordinates.lng}
+                </div>
+              )
+            ) : (
+              <div>사용자 위도경도 정보 없음.</div>
+            )}
             <button className="logout-button" onClick={handleLogout}>
               로그아웃
             </button>
@@ -70,8 +104,8 @@ function MainPage({ loggedInUser, handleLogout }) {
       <div className="main-body">
         <div className="main-map">
           <KakaoMap
-            pos_x={selectedPosition.pos_x}
-            pos_y={selectedPosition.pos_y}
+            latitude={selectedPosition.latitude}
+            longitude={selectedPosition.longitude}
           />
         </div>
         <div className="main-content">
@@ -86,7 +120,7 @@ function MainPage({ loggedInUser, handleLogout }) {
               <button
                 key={index}
                 className="place-item-button"
-                onClick={() => handleClick(place.pos_x, place.pos_y)}
+                onClick={() => handleClick(place.latitude, place.longitude)}
               >
                 <div>
                   <h3>{place.name}</h3>

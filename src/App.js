@@ -1,43 +1,46 @@
 import React, { useState } from "react";
+import { Routes, Route, useNavigate } from "react-router-dom";
+import axios from "axios";
+
 import LoginPage from "./LoginPage";
 import MainPage from "./MainPage";
 import SurveyPage from "./SurveyPage";
-import { Routes, Route, useNavigate } from "react-router-dom";
 import "./App.css";
 
-const database = [
-  {
-    id: "user1",
-    sex: "남자",
-    age: "20대",
-    region: "중구",
-    food: "한식",
-    hobby: "걷기",
-  },
-  {
-    id: "user2",
-    sex: "여자",
-    age: "30대",
-    region: "서구",
-    food: "중식",
-    hobby: "운동",
-  },
-];
+// 위와 같이 모든 import가 파일의 최상단에 있어야 합니다
 
 function App() {
   const [loggedInUser, setLoggedInUser] = useState(null);
-  const [inputId, setInputId] = useState("");
+  const [inputEmail, setInputEmail] = useState("");
+  const [inputPassword, setInputPassword] = useState("");
   const [warning, setWarning] = useState("");
   const navigate = useNavigate();
 
-  const handleLogin = () => {
-    const user = database.find((user) => user.id === inputId);
-    if (user) {
-      setLoggedInUser(user);
-      setInputId("");
+  const handleLogin = async () => {
+    const updatedInfo = {
+      email: inputEmail,
+      password: inputPassword,
+    };
+    try {
+      const response = await axios.post(
+        `http://ec2-13-125-211-97.ap-northeast-2.compute.amazonaws.com:5000/users/login`,
+        updatedInfo,
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      setLoggedInUser(response.data);
+      setWarning("");
       navigate("/main");
-    } else {
-      setWarning("아이디를 찾을 수 없습니다.");
+    } catch (error) {
+      if (error.response && error.response.status === 404) {
+        setWarning("이메일 또는 비밀번호가 올바르지 않습니다.");
+      } else {
+        setWarning("서버 오류가 발생했습니다.");
+      }
+      console.error("Error during login:", error);
     }
   };
 
@@ -57,9 +60,11 @@ function App() {
           path="/"
           element={
             <LoginPage
-              inputId={inputId}
+              inputEmail={inputEmail}
+              inputPassword={inputPassword}
               warning={warning}
-              setInputId={setInputId}
+              setInputEmail={setInputEmail}
+              setInputPassword={setInputPassword}
               handleSurvey={handleSurvey}
               handleLogin={handleLogin}
             />

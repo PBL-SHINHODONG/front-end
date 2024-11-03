@@ -1,40 +1,100 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 import "./SurveyPage.css";
 
 const SurveyPage = () => {
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(0);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [sex, setSex] = useState("");
-  const [age, setAge] = useState("");
-  const [region, setRegion] = useState("");
+  const [age_group, setAge_group] = useState("");
   const [food, setFood] = useState("");
-  const [hobby, setHobby] = useState("");
+  const [place, setPlace] = useState("");
+  const [budget, setButget] = useState("");
+  const [atomsphere, setAtomSphere] = useState("");
   const [userInfo, setUserInfo] = useState({
-    sex: "",
-    age: "",
-    region: "",
-    food: "",
-    hobby: "",
+    email: "",
+    password: "",
+    sex: true,
+    age_group: 0,
+    preferred_food: "",
+    preferred_activity: "",
+    budget_range: "",
+    preferred_atomsphere: "",
   });
 
   const navigate = useNavigate();
-  const handleSuccess = () => {
+  const handleSuccess = async () => {
     const updatedInfo = {
-      sex: sex,
-      age: age,
-      region: region,
-      food: food,
-      hobby: hobby,
+      email: email || null,
+      password: password || null,
+      sex: sex === "여자" ? true : false,
+      age_group:
+        age_group === "10대"
+          ? 1
+          : age_group === "20대"
+          ? 2
+          : age_group === "30대"
+          ? 3
+          : age_group === "40대"
+          ? 4
+          : age_group === "50대"
+          ? 5
+          : age_group === "60대"
+          ? 6
+          : age_group === "70대 이상"
+          ? 7
+          : null,
+      preferred_food: food || null,
+      preferred_activity: place || null,
+      budget_range: budget || null,
+      preferred_atomsphere: atomsphere || null,
     };
     setUserInfo(updatedInfo);
     console.log("Updated userInfo:", updatedInfo);
-    navigate("/main");
+    try {
+      const response = await axios.post(
+        `http://ec2-13-125-211-97.ap-northeast-2.compute.amazonaws.com:5000/users/register`,
+        updatedInfo,
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      console.log("User registered:", response.data);
+    } catch (error) {
+      console.error("Error registering user:", error);
+    }
+    navigate("/");
   };
   const nextStep = () => {
     setStep((prevStep) => prevStep + 1);
   };
   const renderStep = () => {
     switch (step) {
+      case 0:
+        return (
+          <div>
+            <h2>이메일과 닉네임을 작성하세요:</h2>
+            <input
+              type="email"
+              placeholder="이메일"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="styled-input"
+            />
+            <input
+              type="text"
+              placeholder="비밀번호"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="styled-input"
+            />
+            <button onClick={nextStep}>다음</button>
+          </div>
+        );
       case 1:
         return (
           <div>
@@ -66,7 +126,7 @@ const SurveyPage = () => {
                 <button
                   key={ageGroup}
                   onClick={() => {
-                    setAge(ageGroup);
+                    setAge_group(ageGroup);
                     nextStep();
                   }}
                 >
@@ -79,42 +139,43 @@ const SurveyPage = () => {
       case 3:
         return (
           <div>
-            <h2>지역을 선택하세요:</h2>
-            {[
-              "남구",
-              "서구",
-              "중구",
-              "북구",
-              "동구",
-              "달성군",
-              "달서구",
-              "수성구",
-            ].map((region) => (
-              <button
-                key={region}
-                onClick={() => {
-                  setRegion(region);
-                  nextStep();
-                }}
-              >
-                {region}
-              </button>
-            ))}
+            <h2>선호하는 음식을 선택하세요:</h2>
+            {["양식", "일식", "한식", "중식", "디저트", "상관 없음"].map(
+              (food) => (
+                <button
+                  key={food}
+                  onClick={() => {
+                    setFood(food);
+                    nextStep();
+                  }}
+                >
+                  {food}
+                </button>
+              )
+            )}
           </div>
         );
       case 4:
         return (
           <div>
-            <h2>좋아하는 음식을 선택하세요:</h2>
-            {["한식", "중식", "일식", "양식"].map((food) => (
+            <h2>선호하는 장소를 선택하세요:</h2>
+            {[
+              "음식점",
+              "카페",
+              "영화관",
+              "미술관",
+              "박물관",
+              "기타",
+              "상관 없음",
+            ].map((place) => (
               <button
-                key={food}
+                key={place}
                 onClick={() => {
-                  setFood(food);
+                  setPlace(place);
                   nextStep();
                 }}
               >
-                {food}
+                {place}
               </button>
             ))}
           </div>
@@ -122,21 +183,40 @@ const SurveyPage = () => {
       case 5:
         return (
           <div>
-            <h2>좋아하는 것을 선택하세요:</h2>
-            {["걷기", "영화", "운동", "게임"].map((hobby) => (
+            <h2>예산 범위를 선택하세요:</h2>
+            {["1만원", "2만원", "3만원", "5만원", "상관 없음"].map((budget) => (
               <button
-                key={hobby}
+                key={budget}
                 onClick={() => {
-                  setHobby(hobby);
+                  setButget(budget);
                   nextStep();
                 }}
               >
-                {hobby}
+                {budget}
               </button>
             ))}
           </div>
         );
       case 6:
+        return (
+          <div>
+            <h2>선호하는 분위기를 선택하세요:</h2>
+            {["조용한", "활기찬", "분위기 좋은", "상관 없음"].map(
+              (atomsphere) => (
+                <button
+                  key={atomsphere}
+                  onClick={() => {
+                    setAtomSphere(atomsphere);
+                    nextStep();
+                  }}
+                >
+                  {atomsphere}
+                </button>
+              )
+            )}
+          </div>
+        );
+      case 7:
         return (
           <div>
             <h2>모든 수집이 끝났습니다. 버튼을 클릭하세요.</h2>

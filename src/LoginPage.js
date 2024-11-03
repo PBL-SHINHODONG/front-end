@@ -2,8 +2,10 @@ import React, { useState } from "react";
 import "./LoginPage.css";
 
 function LoginPage({
-  inputId,
-  setInputId,
+  inputEmail,
+  inputPassword,
+  setInputEmail,
+  setInputPassword,
   warning,
   handleLogin,
   handleSurvey,
@@ -15,10 +17,17 @@ function LoginPage({
         <div>
           <input
             type="text"
-            placeholder="Enter your username"
+            placeholder="Enter your email"
             className="login-input"
-            value={inputId}
-            onChange={(e) => setInputId(e.target.value)}
+            value={inputEmail}
+            onChange={(e) => setInputEmail(e.target.value)}
+          />
+          <input
+            type="text"
+            placeholder="Enter your password"
+            className="login-input"
+            value={inputPassword}
+            onChange={(e) => setInputPassword(e.target.value)}
           />
         </div>
         {warning && <div className="warning-text">{warning}</div>}

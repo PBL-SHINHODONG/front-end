@@ -67,3 +67,21 @@
     max-width: 200px;
   }
   
+  .styled-input {
+    width: 100%;
+    max-width: 400px;
+    padding: 15px;
+    margin: 10px 0;
+    font-size: 16px;
+    border: 2px solid #eecad5;
+    border-radius: 8px;
+    background-color: #fff;
+    color: #333;
+    transition: border-color 0.3s ease;
+  }
+  
+  .styled-input:focus {
+    border-color: #da92a7;
+    outline: none;
+  }
+  

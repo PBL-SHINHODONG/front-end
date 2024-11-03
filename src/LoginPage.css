@@ -12,7 +12,7 @@
     padding: 20px;
     border-radius: 5px;
     width: 300px;
-    height : 230px;
+    height : 330px;
     box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2);
 }
 .login-text {
@@ -23,12 +23,22 @@
 }
 
 .login-input {
-    width: 95%;
-    padding: 10px;
-    margin-bottom: 20px;
-    border: none;
-    border-radius: 5px;
-}
+    width: 90%;
+    max-width: 400px;
+    padding: 15px;
+    margin: 10px 0;
+    font-size: 16px;
+    border: 2px solid #eecad5;
+    border-radius: 8px;
+    background-color: #fff;
+    color: #333;
+    transition: border-color 0.3s ease;
+  }
+  
+  .login-input:focus {
+    border-color: #da92a7;
+    outline: none;
+  }
 
 .login-button {
     width: 100%;
