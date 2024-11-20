@@ -12,7 +12,7 @@ const SurveyPage = () => {
   const [food, setFood] = useState("");
   const [place, setPlace] = useState("");
   const [budget, setButget] = useState("");
-  const [atomsphere, setAtomSphere] = useState("");
+  const [atmosphere, setAtmosphere] = useState("");
   const [userInfo, setUserInfo] = useState({
     email: "",
     password: "",
@@ -21,7 +21,7 @@ const SurveyPage = () => {
     preferred_food: "",
     preferred_activity: "",
     budget_range: "",
-    preferred_atomsphere: "",
+    preferred_atmosphere: "",
   });
 
   const navigate = useNavigate();
@@ -49,7 +49,7 @@ const SurveyPage = () => {
       preferred_food: food || null,
       preferred_activity: place || null,
       budget_range: budget || null,
-      preferred_atomsphere: atomsphere || null,
+      preferred_atmosphere: atmosphere || null,
     };
     setUserInfo(updatedInfo);
     console.log("Updated userInfo:", updatedInfo);
@@ -202,15 +202,15 @@ const SurveyPage = () => {
           <div>
             <h2>선호하는 분위기를 선택하세요:</h2>
             {["조용한", "활기찬", "분위기 좋은", "상관 없음"].map(
-              (atomsphere) => (
+              (atmosphere) => (
                 <button
-                  key={atomsphere}
+                  key={atmosphere}
                   onClick={() => {
-                    setAtomSphere(atomsphere);
+                    setAtmosphere(atmosphere);
                     nextStep();
                   }}
                 >
-                  {atomsphere}
+                  {atmosphere}
                 </button>
               )
             )}

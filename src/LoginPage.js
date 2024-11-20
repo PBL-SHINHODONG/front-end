@@ -23,7 +23,7 @@ function LoginPage({
             onChange={(e) => setInputEmail(e.target.value)}
           />
           <input
-            type="text"
+            type="password"
             placeholder="Enter your password"
             className="login-input"
             value={inputPassword}

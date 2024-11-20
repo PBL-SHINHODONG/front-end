@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 
-const KakaoMap = ({ latitude, longitude }) => {
+const KakaoMap = ({ latitude, longitude, markers = [], polylinePath = [] }) => {
   useEffect(() => {
     const { kakao } = window;
 
@@ -11,22 +11,62 @@ const KakaoMap = ({ latitude, longitude }) => {
         level: 3,
       };
 
-      // 지도 생성
+      // 지도 생성 및 mapRef에 저장
       const map = new kakao.maps.Map(container, options);
 
-      // 마커 생성 및 지도에 표시
       const markerPosition = new kakao.maps.LatLng(latitude, longitude);
       const marker = new kakao.maps.Marker({
         position: markerPosition,
       });
       marker.setMap(map);
+      // 장소마다 마커 표시
+      markers.forEach((markerInfo) => {
+        const marker = new kakao.maps.Marker({
+          position: new kakao.maps.LatLng(
+            markerInfo.latitude,
+            markerInfo.longitude
+          ),
+        });
+        marker.setMap(map);
+      });
+
+      // 폴리라인 경로 표시
+      if (polylinePath.length > 1) {
+        const polyline = new kakao.maps.Polyline({
+          path: polylinePath,
+          strokeWeight: 8, // 더 두꺼운 선
+          strokeColor: "#FF4500",
+          strokeOpacity: 0.9,
+          strokeStyle: "solid",
+        });
+
+        const borderPolyline = new kakao.maps.Polyline({
+          path: polylinePath,
+          strokeWeight: 12,
+          strokeColor: "#FFFFFF",
+          strokeOpacity: 0.6,
+          strokeStyle: "solid",
+        });
+
+        const dottedPolyline = new kakao.maps.Polyline({
+          path: polylinePath,
+          strokeWeight: 5,
+          strokeColor: "#FF4500",
+          strokeOpacity: 0.8,
+          strokeStyle: "shortdash",
+        });
+
+        // 지도에 폴리라인 추가
+        polyline.setMap(map);
+        borderPolyline.setMap(map);
+        dottedPolyline.setMap(map);
+      }
     };
 
-    // 지도 초기화 함수 호출
     if (kakao && kakao.maps) {
       initializeMap();
     }
-  }, [latitude, longitude]); // 위도와 경도가 변경될 때마다 실행
+  }, [latitude, longitude, markers, polylinePath]);
 
   return <div id="map" style={{ width: "100%", height: "100%" }}></div>;
 };
