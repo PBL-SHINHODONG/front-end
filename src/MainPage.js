@@ -5,18 +5,19 @@ import axios from "axios";
 import "./MainPage.css";
 import Modal from "./Modal.js";
 import useGeolocation from "./hooks/useGeolocation";
+import useThrottle from "./hooks/useThrottle";
 
 function MainPage({ loggedInUser, handleLogout }) {
   const [places, setPlaces] = useState([]);
   const [isFetching, setIsFetching] = useState(false);
   const [visitCounts, setVisitCounts] = useState({});
+  const [markers, setMarkers] = useState([]);
   const location = useGeolocation();
   const [selectedPosition, setSelectedPosition] = useState({
     latitude: 35.8714354,
     longitude: 128.601445,
   });
   const navigate = useNavigate();
-  const [markers, setMarkers] = useState([]);
   const [polylinePath, setPolylinePath] = useState([]);
   const [isLogin, setIsLogin] = useState(false);
   const [userId, setUserId] = useState(0);
@@ -29,6 +30,10 @@ function MainPage({ loggedInUser, handleLogout }) {
   const [routeResult, setRouteResult] = useState({});
   const [menus, setMenus] = useState([]);
   const [isFetchRoute, setIsFetchRoute] = useState(false);
+  const [keyword, setKeyword] = useState("");
+  const [keywordResult, setKeywordResult] = useState([]);
+  const [placeId, setPlaceId] = useState(0);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
   const { kakao } = window;
   const [contextMenu, setContextMenu] = useState({
     visible: false,
@@ -36,8 +41,8 @@ function MainPage({ loggedInUser, handleLogout }) {
     y: 0,
     place: null,
   });
-
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const throttledKeyword = useThrottle(keyword, 1000);
 
   const handleResize = () => {
     setIsMobile(window.innerWidth <= 768);
@@ -78,6 +83,59 @@ function MainPage({ loggedInUser, handleLogout }) {
       navigate("/");
     }
   }, [loggedInUser]);
+
+  const handleSearch = (e) => {
+    const value = e.target.value;
+    setKeyword(value);
+    if (throttledKeyword) {
+      searchValue(throttledKeyword);
+    }
+  };
+
+  const isKeyWordNow = keyword.trim() !== "";
+
+  const searchValue = async (keyword) => {
+    try {
+      const response = await axios.get(
+        `http://ec2-13-125-211-97.ap-northeast-2.compute.amazonaws.com:5000/search/${keyword}?page=1&size=20`
+      );
+      if (response.data.detail === "Search not found") return;
+      const data = await response.data.items;
+      const result = data.map((item) => ({
+        id: item.place_id,
+        name: item.place_name.includes(keyword)
+          ? item.place_name
+          : `${item.menu_name} / ${item.place_name}`,
+      }));
+      setPlaceId(result.place_id);
+      const res = [];
+      result.forEach((item) => {
+        if (!res.some((r) => r.id === item.id)) {
+          res.push(item);
+        }
+      });
+      setKeywordResult(res);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const RelatedSearchItem = React.memo(({ item, onClick }) => {
+    return (
+      <div
+        className={
+          isMobile ? "mobile-related-search-item" : "related-search-item"
+        }
+        tabIndex="0"
+        onMouseDown={(e) => {
+          e.preventDefault();
+          onClick(item.id);
+        }}
+      >
+        {item.name}
+      </div>
+    );
+  });
 
   const max = (a, b) => {
     return Math.max(a, b);
@@ -144,16 +202,31 @@ function MainPage({ loggedInUser, handleLogout }) {
     const API_KEY = process.env.REACT_APP_API_KEY;
     const url = "https://apis-navi.kakaomobility.com/v1/waypoints/directions";
 
-    const start = { x: 128.73240044388956, y: 35.879280894119255 };
-    const end = { x: 128.55836290943844, y: 35.87081315633119 };
-
+    const start = {
+      x: 128.73240044388956,
+      y: 35.879280894119255,
+      label: "출발지",
+    };
+    const end = {
+      x: 128.55836290943844,
+      y: 35.87081315633119,
+      label: "도착지",
+    };
     const waypoints = [
-      { x: 128.652345, y: 35.879234 },
-      { x: 128.612345, y: 35.859234 },
-      { x: 128.612365, y: 35.859232 },
-      { x: 128.612366, y: 35.859233 },
+      { x: 128.652345, y: 35.879234, label: "경유지 1" },
+      { x: 128.652333, y: 35.859234, label: "경유지 2" },
+      { x: 128.632334, y: 35.859232, label: "경유지 3" },
+      { x: 128.612366, y: 35.859233, label: "경유지 4" },
     ];
-
+    const markers = [
+      { latitude: start.y, longitude: start.x, label: start.label },
+      { latitude: end.y, longitude: end.x, label: end.label },
+      ...waypoints.map((waypoint) => ({
+        latitude: waypoint.y,
+        longitude: waypoint.x,
+        label: waypoint.label,
+      })),
+    ];
     const headers = {
       Authorization: `KakaoAK ${API_KEY}`,
       "Content-Type": "application/json",
@@ -200,7 +273,7 @@ function MainPage({ loggedInUser, handleLogout }) {
           }
         });
       });
-
+      setMarkers(markers);
       setPolylinePath(routePath);
     } catch (error) {
       console.error("Error:", error);
@@ -219,6 +292,26 @@ function MainPage({ loggedInUser, handleLogout }) {
 
   const handleClick = (x, y) => {
     setSelectedPosition({ latitude: x, longitude: y });
+  };
+
+  const handleKeywordClick = async (placeId) => {
+    try {
+      const response = await axios.get(
+        `http://ec2-13-125-211-97.ap-northeast-2.compute.amazonaws.com:5000/places/${placeId}`
+      );
+      const data = response.data.basic_info;
+      const place = {
+        id: data.id,
+        name: data.name,
+        latitude: data.LatLng.latitude,
+        longitude: data.LatLng.longitude,
+      };
+      handleClick(place.latitude, place.longitude);
+      setKeyword(place.name);
+      openModal(place);
+    } catch (error) {
+      console.log(error);
+    }
   };
 
   const handleVisit = async () => {
@@ -396,7 +489,43 @@ function MainPage({ loggedInUser, handleLogout }) {
       <div className="main-header">
         {loggedInUser ? (
           <>
-            <h2>안녕하세요, {loggedInUser.email}님!</h2>
+            <img
+              src="images/logo.png"
+              alt="Logo"
+              style={{ width: "100px", height: "100px", cursor: "pointer" }}
+            />
+            <div className={isMobile ? "mobile-search-bar" : "search-bar"}>
+              <input
+                type="text"
+                value={keyword}
+                onChange={handleSearch}
+                onFocus={() => setIsSearchFocused(true)}
+                onBlur={(e) => {
+                  if (!e.currentTarget.contains(e.relatedTarget)) {
+                    setIsSearchFocused(false);
+                  }
+                }}
+                placeholder="검색어 입력"
+              />
+
+              <br />
+              {isSearchFocused && keywordResult.length > 0 && isKeyWordNow && (
+                <div
+                  className={
+                    isMobile ? "mobile-related-searches" : "related-searches"
+                  }
+                  tabIndex="-1"
+                >
+                  {keywordResult.map((item) => (
+                    <RelatedSearchItem
+                      key={item.id}
+                      item={item}
+                      onClick={handleKeywordClick}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
             <button className="logout-button" onClick={handleLogout}>
               로그아웃
             </button>
@@ -408,7 +537,7 @@ function MainPage({ loggedInUser, handleLogout }) {
       {isMobile && (
         <div className="main-content-filter">
           <button onClick={fetchData}>명소</button>
-          <button onClick={handleVisit}>방문 장소</button>
+          <button onClick={handleVisit}>즐겨찾기</button>
           <button onClick={fetchRoute}>경로</button>
           <button onClick={handleRecommend}>추천 장소</button>
           {showSelect && (
@@ -434,7 +563,7 @@ function MainPage({ loggedInUser, handleLogout }) {
           {!isMobile && (
             <div className="main-content-filter">
               <button onClick={fetchData}>명소</button>
-              <button onClick={handleVisit}>방문 장소</button>
+              <button onClick={handleVisit}>즐겨찾기</button>
               <button onClick={fetchRoute}>경로</button>
               <button onClick={handleRecommend}>추천 장소</button>
               {showSelect && (
@@ -452,7 +581,7 @@ function MainPage({ loggedInUser, handleLogout }) {
               <p>로딩 중입니다...</p>
             </div>
           ) : NotVisit ? (
-            <p>기록되어 있는 방문 장소가 없습니다.</p>
+            <p>기록되어 있는 즐겨찾기가 없습니다.</p>
           ) : (
             <div className="main-content-place">
               {places.map((place, index) => (
@@ -474,7 +603,7 @@ function MainPage({ loggedInUser, handleLogout }) {
                         onClick={() => handleVisitClick(place.id)}
                         className="visit-button"
                       >
-                        방문 여부
+                        즐겨찾기
                       </button>
                       <button
                         onClick={() => openModal(place)}
@@ -500,7 +629,7 @@ function MainPage({ loggedInUser, handleLogout }) {
                     onClick={() => handleVisitClick(contextMenu.place.id)}
                     className="visit-button"
                   >
-                    방문 여부
+                    즐겨찾기
                   </button>
                   <button
                     onClick={() => openModal(contextMenu.place)}
@@ -517,19 +646,19 @@ function MainPage({ loggedInUser, handleLogout }) {
 
       <div className="main-footer">
         {isFetchRoute ? (
-          <div>
+          <div className="detail-info">
             <p>택시비 : 약 {routeResult.tax}원</p>{" "}
             {routeResult.toll > 0 && (
-              <p>톨게이트비 : 약 {routeResult.toll}원</p>
+              <p>톨게이트비 : 약 {routeResult.toll}원 </p>
             )}
-            <p>거리 : 약 {routeResult.distance}m</p>
+            <p> 거리 : 약 {routeResult.distance}m </p>
             <p>
               시간 : 약 {routeResult.duration_min}분 {routeResult.duration_sec}
               초
             </p>
           </div>
         ) : (
-          <h1>푸터</h1>
+          <h5>Copyrights 2024 All rights reserved. 11 Dec 2024.</h5>
         )}
       </div>
 

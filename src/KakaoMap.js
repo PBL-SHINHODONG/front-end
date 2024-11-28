@@ -20,13 +20,23 @@ const KakaoMap = ({ latitude, longitude, markers = [], polylinePath = [] }) => {
       });
       marker.setMap(map);
       markers.forEach((markerInfo) => {
+        const position = new kakao.maps.LatLng(
+          markerInfo.latitude,
+          markerInfo.longitude
+        );
         const marker = new kakao.maps.Marker({
-          position: new kakao.maps.LatLng(
-            markerInfo.latitude,
-            markerInfo.longitude
-          ),
+          position: new kakao.maps.LatLng(position),
         });
         marker.setMap(map);
+        if (markerInfo.label) {
+          const content = `<div style="padding:5px;background-color:white;border:1px solid #ccc;border-radius:3px;">${markerInfo.label}</div>`;
+          const overlay = new kakao.maps.CustomOverlay({
+            position,
+            content,
+            yAnchor: 1.5,
+          });
+          overlay.setMap(map);
+        }
       });
 
       if (polylinePath.length > 1) {
