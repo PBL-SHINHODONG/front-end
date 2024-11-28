@@ -19,7 +19,6 @@ const KakaoMap = ({ latitude, longitude, markers = [], polylinePath = [] }) => {
         position: markerPosition,
       });
       marker.setMap(map);
-      // 장소마다 마커 표시
       markers.forEach((markerInfo) => {
         const marker = new kakao.maps.Marker({
           position: new kakao.maps.LatLng(
@@ -30,12 +29,11 @@ const KakaoMap = ({ latitude, longitude, markers = [], polylinePath = [] }) => {
         marker.setMap(map);
       });
 
-      // 폴리라인 경로 표시
       if (polylinePath.length > 1) {
         const polyline = new kakao.maps.Polyline({
           path: polylinePath,
-          strokeWeight: 8, // 더 두꺼운 선
-          strokeColor: "#FF4500",
+          strokeWeight: 8,
+          strokeColor: "#220cec",
           strokeOpacity: 0.9,
           strokeStyle: "solid",
         });
@@ -51,7 +49,7 @@ const KakaoMap = ({ latitude, longitude, markers = [], polylinePath = [] }) => {
         const dottedPolyline = new kakao.maps.Polyline({
           path: polylinePath,
           strokeWeight: 5,
-          strokeColor: "#FF4500",
+          strokeColor: "#220cec",
           strokeOpacity: 0.8,
           strokeStyle: "shortdash",
         });
