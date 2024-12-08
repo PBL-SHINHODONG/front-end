@@ -46,7 +46,6 @@ function MainPage({ loggedInUser, handleLogout }) {
   const [routeCourse, setRouteCourse] = useState([]);
   const [routeKeyword, setRouteKeyword] = useState("");
   const [routeKeywordResult, setRouteKeywordResult] = useState([]);
-  const [isStep, setIsStep] = useState(1);
   const [courseCoordinates, setCourseCoordinates] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(false);
   const searchTimeout = useRef();
@@ -484,54 +483,6 @@ function MainPage({ loggedInUser, handleLogout }) {
     }
   };
 
-  const handleRecommend = async () => {
-    try {
-      setPlaces([]);
-      setShowSelect(false);
-      setIsFetchRoute(false);
-      const response = await axios.get(
-        `http://ec2-13-125-211-97.ap-northeast-2.compute.amazonaws.com:5000/places/${userId}/recommend?page=1&size=50`,
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-      const data = response.data.items;
-      const result = data.map((item) => {
-        const naverScore = item.naver_info?.score;
-        const kakaoScore = item.kakao_info?.score;
-        const averageScore =
-          naverScore && kakaoScore
-            ? parseFloat(((naverScore + kakaoScore) / 2).toFixed(2))
-            : naverScore || kakaoScore || null;
-
-        return {
-          id: item.basic_info.id,
-          name: item.basic_info.name,
-          address: item.basic_info.address,
-          latitude: item.basic_info.LatLng.latitude,
-          longitude: item.basic_info.LatLng.longitude,
-          score: averageScore,
-          review_count: item.kakao_info?.review_count || 0,
-        };
-      });
-      setPlaces(result);
-    } catch (error) {
-      if (error.response) {
-        const errorMessage = JSON.parse(error.response.request.response);
-        if (errorMessage.detail === "No visited places found for this user") {
-          setPlaces([]);
-          setNotVisit(true);
-        } else {
-          console.error("Error:", errorMessage.detail);
-        }
-      }
-    } finally {
-      setIsFetching(false);
-    }
-  };
-
   const handleReview = async (place_id) => {
     try {
       const url = `http://ec2-13-125-211-97.ap-northeast-2.compute.amazonaws.com:5000/reviews/${place_id}?page=1&size=50`;
@@ -705,7 +656,6 @@ function MainPage({ loggedInUser, handleLogout }) {
           <button onClick={handleFetchData}>명소</button>
           <button onClick={handleFavorite}>즐겨찾기</button>
           <button onClick={handleCourse}>경로</button>
-          <button onClick={handleRecommend}>추천 장소</button>
           {showSelect && (
             <select value={selectedOption} onChange={handleChange}>
               <option value="option1">이름순 정렬</option>
@@ -731,7 +681,6 @@ function MainPage({ loggedInUser, handleLogout }) {
               <button onClick={handleFetchData}>명소 </button>
               <button onClick={handleFavorite}>즐겨찾기</button>
               <button onClick={handleCourse}>코스</button>
-              <button onClick={handleRecommend}>추천 장소</button>
               {showSelect && (
                 <select value={selectedOption} onChange={handleChange}>
                   <option value="option1">이름순 정렬</option>
