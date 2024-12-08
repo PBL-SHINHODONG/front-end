@@ -1,11 +1,11 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import KakaoMap from "./KakaoMap";
 import axios from "axios";
 import "./MainPage.css";
 import Modal from "./Modal.js";
+import RouteModal from "./RouteModal.js";
 import useGeolocation from "./hooks/useGeolocation";
-import useThrottle from "./hooks/useThrottle";
 
 function MainPage({ loggedInUser, handleLogout }) {
   const [places, setPlaces] = useState([]);
@@ -23,13 +23,12 @@ function MainPage({ loggedInUser, handleLogout }) {
   const [userId, setUserId] = useState(0);
   const [showSelect, setShowSelect] = useState(false);
   const [NotVisit, setNotVisit] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isPlaceModalOpen, setIsPlaceModalOpen] = useState(false);
   const [selectedOption, setSelectedOption] = useState("option1");
   const [selectedPlace, setSelectedPlace] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [routeResult, setRouteResult] = useState({});
   const [menus, setMenus] = useState([]);
-  const [isFetchRoute, setIsFetchRoute] = useState(false);
   const [keyword, setKeyword] = useState("");
   const [keywordResult, setKeywordResult] = useState([]);
   const [placeId, setPlaceId] = useState(0);
@@ -42,7 +41,31 @@ function MainPage({ loggedInUser, handleLogout }) {
     place: null,
   });
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
-  const throttledKeyword = useThrottle(keyword, 1000);
+  const [isRouteModalOpen, setIsRouteModalOpen] = useState(false);
+  const [isFetchRoute, setIsFetchRoute] = useState(false);
+  const [routeCourse, setRouteCourse] = useState([]);
+  const [routeKeyword, setRouteKeyword] = useState("");
+  const [routeKeywordResult, setRouteKeywordResult] = useState([]);
+  const [isStep, setIsStep] = useState(1);
+  const [courseCoordinates, setCourseCoordinates] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState(false);
+  const searchTimeout = useRef();
+
+  const handleCategoryChange = (e) => {
+    setSelectedCategory(e.target.value);
+  };
+
+  const subCategories = {
+    food: [
+      { value: "한식", label: "한식" },
+      { value: "일식", label: "일식" },
+      { value: "중식", label: "중식" },
+      { value: "양식", label: "양식" },
+      { value: "아시아식", label: "아시아식" },
+      { value: "주점", label: "주점" },
+      { value: "미분류", label: "기타" },
+    ],
+  };
 
   const handleResize = () => {
     setIsMobile(window.innerWidth <= 768);
@@ -86,13 +109,20 @@ function MainPage({ loggedInUser, handleLogout }) {
 
   const handleSearch = (e) => {
     const value = e.target.value;
+
     setKeyword(value);
-    if (throttledKeyword) {
-      searchValue(throttledKeyword);
+
+    if (searchTimeout.current) {
+      clearTimeout(searchTimeout.current);
     }
+
+    searchTimeout.current = setTimeout(() => {
+      searchValue(value);
+    }, 1000);
   };
 
-  const isKeyWordNow = keyword.trim() !== "";
+  const isKeyWordNow = (type) =>
+    type === keyword ? keyword.trim() !== "" : routeKeyword.trim() !== "";
 
   const searchValue = async (keyword) => {
     try {
@@ -120,6 +150,32 @@ function MainPage({ loggedInUser, handleLogout }) {
     }
   };
 
+  const handleRouteSearch = async (keyword) => {
+    try {
+      const response = await axios.get(
+        `http://ec2-13-125-211-97.ap-northeast-2.compute.amazonaws.com:5000/search/${keyword}?page=1&size=20`
+      );
+      if (response.data.detail === "Search not found") return;
+      const data = await response.data.items;
+      const result = data.map((item) => ({
+        id: item.place_id,
+        name: item.place_name.includes(keyword)
+          ? item.place_name
+          : `${item.menu_name} / ${item.place_name}`,
+      }));
+      setPlaceId(result.place_id);
+      const res = [];
+      result.forEach((item) => {
+        if (!res.some((r) => r.id === item.id)) {
+          res.push(item);
+        }
+      });
+      setRouteKeywordResult(res);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   const RelatedSearchItem = React.memo(({ item, onClick }) => {
     return (
       <div
@@ -136,11 +192,17 @@ function MainPage({ loggedInUser, handleLogout }) {
       </div>
     );
   });
-
+  const handleRouteCourse = (course) => {
+    setRouteCourse((prev) => [
+      ...prev,
+      { courseId: course.id, courseName: course.name },
+    ]);
+    closeModal();
+  };
   const max = (a, b) => {
     return Math.max(a, b);
   };
-  const fetchData = async (selectedOption) => {
+  const handleFetchData = async (selectedOption) => {
     if (isFetching) return;
     setPolylinePath();
     setIsFetching(true);
@@ -148,10 +210,10 @@ function MainPage({ loggedInUser, handleLogout }) {
     setIsFetchRoute(false);
     const url =
       selectedOption === "option3"
-        ? `http://ec2-13-125-211-97.ap-northeast-2.compute.amazonaws.com:5000/places/?sort_by=review_count&order=desc&page_size=100&page=1&size=50`
+        ? `http://ec2-13-125-211-97.ap-northeast-2.compute.amazonaws.com:5000/places/?sort_by=review_count&order=desc&page_size=10&page=1&size=50`
         : selectedOption === "option2"
-        ? `http://ec2-13-125-211-97.ap-northeast-2.compute.amazonaws.com:5000/places/?sort_by=score&order=asc&page_size=100&page=1&size=50`
-        : `http://ec2-13-125-211-97.ap-northeast-2.compute.amazonaws.com:5000/places/?sort_by=name&order=asc&page_size=100&page=1&size=50`;
+        ? `http://ec2-13-125-211-97.ap-northeast-2.compute.amazonaws.com:5000/places/?sort_by=score&order=asc&page_size=10&page=1&size=50`
+        : `http://ec2-13-125-211-97.ap-northeast-2.compute.amazonaws.com:5000/places/?sort_by=name&order=asc&page_size=10&page=1&size=50`;
     try {
       const response = await axios.get(url);
       const data = await response.data.items.slice(0, 50);
@@ -186,38 +248,70 @@ function MainPage({ loggedInUser, handleLogout }) {
     }
   };
 
-  const openModal = (place) => {
+  const openPlaceModal = (place) => {
     setSelectedPlace(place);
-    setIsModalOpen(true);
+    setIsPlaceModalOpen(true);
     handleReview(place.id);
     handleMenu(place.id);
   };
-  const closeModal = () => {
-    setIsModalOpen(false);
+  const closePlaceModal = () => {
+    setIsPlaceModalOpen(false);
     setSelectedPlace(null);
   };
 
-  const fetchRoute = async () => {
+  const openModal = () => {
+    setIsRouteModalOpen(true);
+  };
+  const closeModal = () => {
+    setIsRouteModalOpen(false);
+  };
+
+  const handleCourse = () => {
     setIsFetchRoute(true);
+  };
+
+  const fetchRoute = async () => {
+    const coordinatePromises = routeCourse.map(async (course) => {
+      const course_id = course.courseId;
+      const response = await axios.get(
+        `http://ec2-13-125-211-97.ap-northeast-2.compute.amazonaws.com:5000/places/${course_id}`
+      );
+      const name = response.data.basic_info.name;
+      const course_lat = response.data.basic_info.LatLng.latitude;
+      const course_lng = response.data.basic_info.LatLng.longitude;
+
+      return { name, lat: course_lat, lng: course_lng };
+    });
+
+    const coordinates = await Promise.all(coordinatePromises);
+    setCourseCoordinates(coordinates);
     const API_KEY = process.env.REACT_APP_API_KEY;
     const url = "https://apis-navi.kakaomobility.com/v1/waypoints/directions";
 
     const start = {
-      x: 128.73240044388956,
-      y: 35.879280894119255,
-      label: "출발지",
+      x: coordinates[0].lng,
+      y: coordinates[0].lat,
+      label: coordinates[0].name,
     };
+
     const end = {
-      x: 128.55836290943844,
-      y: 35.87081315633119,
-      label: "도착지",
+      x: coordinates[coordinates.length - 1].lng,
+      y: coordinates[coordinates.length - 1].lat,
+      label: coordinates[coordinates.length - 1].name,
     };
-    const waypoints = [
-      { x: 128.652345, y: 35.879234, label: "경유지 1" },
-      { x: 128.652333, y: 35.859234, label: "경유지 2" },
-      { x: 128.632334, y: 35.859232, label: "경유지 3" },
-      { x: 128.612366, y: 35.859233, label: "경유지 4" },
-    ];
+
+    if (start.x && start.y) {
+      setSelectedPosition({
+        latitude: start.y,
+        longitude: start.x,
+      });
+    }
+
+    const waypoints = coordinates.slice(1, -1).map((course, index) => ({
+      x: course.lng,
+      y: course.lat,
+      label: course.name || `경유지 ${index + 1}`,
+    }));
     const markers = [
       { latitude: start.y, longitude: start.x, label: start.label },
       { latitude: end.y, longitude: end.x, label: end.label },
@@ -228,7 +322,7 @@ function MainPage({ loggedInUser, handleLogout }) {
       })),
     ];
     const headers = {
-      Authorization: `KakaoAK ${API_KEY}`,
+      Authorization: `KakaoAK ea3716f48547bc77366bfe1ebf20cbc8`,
       "Content-Type": "application/json",
     };
 
@@ -283,11 +377,11 @@ function MainPage({ loggedInUser, handleLogout }) {
   const handleChange = (event) => {
     const value = event.target.value;
     setSelectedOption(value);
-    fetchData(value);
+    handleFetchData(value);
   };
 
   useEffect(() => {
-    fetchData();
+    handleFetchData();
   }, []);
 
   const handleClick = (x, y) => {
@@ -308,13 +402,13 @@ function MainPage({ loggedInUser, handleLogout }) {
       };
       handleClick(place.latitude, place.longitude);
       setKeyword(place.name);
-      openModal(place);
+      openPlaceModal(place);
     } catch (error) {
       console.log(error);
     }
   };
 
-  const handleVisit = async () => {
+  const handleFavorite = async () => {
     try {
       setPlaces([]);
       setShowSelect(false);
@@ -363,14 +457,13 @@ function MainPage({ loggedInUser, handleLogout }) {
     }
   };
 
-  const handleVisitClick = async (placeId) => {
+  const handleFavoriteClick = async (placeId) => {
     try {
       setShowSelect(false);
       const info = {
         place_id: placeId,
         user_id: userId,
       };
-      console.log(info);
       const response = await axios.post(
         `http://ec2-13-125-211-97.ap-northeast-2.compute.amazonaws.com:5000/visited_places/visit`,
         info,
@@ -484,6 +577,77 @@ function MainPage({ loggedInUser, handleLogout }) {
     }
   };
 
+  const removeRouteCourse = (index) => {
+    setRouteCourse((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleRecommendSimilarPlace = async (selectedCategory) => {
+    try {
+      const response = await axios.post(
+        `http://ec2-13-125-211-97.ap-northeast-2.compute.amazonaws.com:5000/places/recommend/content/${selectedCategory}?page=1&size=50`,
+        {
+          user_id: userId,
+          latitude: location.coordinates.lat,
+          longitude: location.coordinates.lng,
+          top_n: 10,
+        }
+      );
+      const data = response.data.items;
+      const result = data.map((item) => {
+        const name = item.basic_info.name;
+        const id = item.basic_info.id;
+        return { name, id };
+      });
+      setRouteKeywordResult(result);
+    } catch (error) {
+      console.error("Error getting places by category:", error);
+    }
+  };
+
+  const handleRecommendCollaborativePlace = async (selectedCategory) => {
+    try {
+      const response = await axios.post(
+        `http://ec2-13-125-211-97.ap-northeast-2.compute.amazonaws.com:5000/places/recommend/collaborative/${selectedCategory}?page=1&size=50`,
+        {
+          user_id: userId,
+          latitude: location.coordinates.lat,
+          longitude: location.coordinates.lng,
+          top_n: 10,
+        }
+      );
+      const data = response.data.items;
+      const result = data.map((item) => {
+        const name = item.basic_info.name;
+        const id = item.basic_info.id;
+        return { name, id };
+      });
+      setRouteKeywordResult(result);
+    } catch (error) {
+      if (error.response.data.detail === "places not found") {
+        alert("추천된 장소가 없습니다. 다른 카테고리로 지정해주세요.");
+      }
+      console.error("Error getting places by category:", error);
+    }
+  };
+
+  const handleRecommendClusterPlace = async () => {
+    try {
+      const user_id = userId;
+      const response = await axios.get(
+        `http://ec2-13-125-211-97.ap-northeast-2.compute.amazonaws.com:5000/places/recommend/cluster/${user_id}?page=1&size=50`
+      );
+      const data = response.data.items;
+      const result = data.map((item) => {
+        const name = item.basic_info.name;
+        const id = item.basic_info.id;
+        return { name, id };
+      });
+      setRouteKeywordResult(result);
+    } catch (error) {
+      console.error("Error getting places by category:", error);
+    }
+  };
+
   return (
     <div className="main-container">
       <div className="main-header">
@@ -509,22 +673,24 @@ function MainPage({ loggedInUser, handleLogout }) {
               />
 
               <br />
-              {isSearchFocused && keywordResult.length > 0 && isKeyWordNow && (
-                <div
-                  className={
-                    isMobile ? "mobile-related-searches" : "related-searches"
-                  }
-                  tabIndex="-1"
-                >
-                  {keywordResult.map((item) => (
-                    <RelatedSearchItem
-                      key={item.id}
-                      item={item}
-                      onClick={handleKeywordClick}
-                    />
-                  ))}
-                </div>
-              )}
+              {isSearchFocused &&
+                keywordResult.length > 0 &&
+                isKeyWordNow(keyword) && (
+                  <div
+                    className={
+                      isMobile ? "mobile-related-searches" : "related-searches"
+                    }
+                    tabIndex="-1"
+                  >
+                    {keywordResult.map((item) => (
+                      <RelatedSearchItem
+                        key={item.id}
+                        item={item}
+                        onClick={handleKeywordClick}
+                      />
+                    ))}
+                  </div>
+                )}
             </div>
             <button className="logout-button" onClick={handleLogout}>
               로그아웃
@@ -536,9 +702,9 @@ function MainPage({ loggedInUser, handleLogout }) {
       </div>
       {isMobile && (
         <div className="main-content-filter">
-          <button onClick={fetchData}>명소</button>
-          <button onClick={handleVisit}>즐겨찾기</button>
-          <button onClick={fetchRoute}>경로</button>
+          <button onClick={handleFetchData}>명소</button>
+          <button onClick={handleFavorite}>즐겨찾기</button>
+          <button onClick={handleCourse}>경로</button>
           <button onClick={handleRecommend}>추천 장소</button>
           {showSelect && (
             <select value={selectedOption} onChange={handleChange}>
@@ -562,9 +728,9 @@ function MainPage({ loggedInUser, handleLogout }) {
         <div className="main-content">
           {!isMobile && (
             <div className="main-content-filter">
-              <button onClick={fetchData}>명소</button>
-              <button onClick={handleVisit}>즐겨찾기</button>
-              <button onClick={fetchRoute}>경로</button>
+              <button onClick={handleFetchData}>명소 </button>
+              <button onClick={handleFavorite}>즐겨찾기</button>
+              <button onClick={handleCourse}>코스</button>
               <button onClick={handleRecommend}>추천 장소</button>
               {showSelect && (
                 <select value={selectedOption} onChange={handleChange}>
@@ -582,6 +748,42 @@ function MainPage({ loggedInUser, handleLogout }) {
             </div>
           ) : NotVisit ? (
             <p>기록되어 있는 즐겨찾기가 없습니다.</p>
+          ) : isFetchRoute ? (
+            <div className="main-content-place">
+              {routeCourse.map((course, index) => (
+                <div key={index} className="route-place-item-button">
+                  <div className="route-course-item">
+                    <p>{course.courseName}</p>
+                  </div>
+                  <button
+                    className="delete-button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeRouteCourse(index);
+                    }}
+                  >
+                    <img
+                      src="images/trash.png"
+                      alt="trash"
+                      className="delete-img"
+                    />
+                  </button>
+                </div>
+              ))}
+
+              {routeCourse.length < 5 && (
+                <div onClick={() => openModal()} className="add-button">
+                  <img src="images/add.png" alt="add" className="add-img" />
+                </div>
+              )}
+              <div className="centered-container">
+                {routeCourse.length > 1 && (
+                  <div onClick={fetchRoute} className="course-button">
+                    <p>경로 탐색</p>
+                  </div>
+                )}
+              </div>
+            </div>
           ) : (
             <div className="main-content-place">
               {places.map((place, index) => (
@@ -600,13 +802,13 @@ function MainPage({ loggedInUser, handleLogout }) {
                   {isMobile && (
                     <>
                       <button
-                        onClick={() => handleVisitClick(place.id)}
+                        onClick={() => handleFavoriteClick(place.id)}
                         className="visit-button"
                       >
                         즐겨찾기
                       </button>
                       <button
-                        onClick={() => openModal(place)}
+                        onClick={() => openPlaceModal(place)}
                         className="info-button"
                       >
                         정보 보기
@@ -626,13 +828,13 @@ function MainPage({ loggedInUser, handleLogout }) {
                   onClick={closeContextMenu}
                 >
                   <button
-                    onClick={() => handleVisitClick(contextMenu.place.id)}
+                    onClick={() => handleFavoriteClick(contextMenu.place.id)}
                     className="visit-button"
                   >
                     즐겨찾기
                   </button>
                   <button
-                    onClick={() => openModal(contextMenu.place)}
+                    onClick={() => openPlaceModal(contextMenu.place)}
                     className="info-button"
                   >
                     정보 보기
@@ -647,24 +849,32 @@ function MainPage({ loggedInUser, handleLogout }) {
       <div className="main-footer">
         {isFetchRoute ? (
           <div className="detail-info">
-            <p>택시비 : 약 {routeResult.tax}원</p>{" "}
-            {routeResult.toll > 0 && (
-              <p>톨게이트비 : 약 {routeResult.toll}원 </p>
-            )}
-            <p> 거리 : 약 {routeResult.distance}m </p>
             <p>
-              시간 : 약 {routeResult.duration_min}분 {routeResult.duration_sec}
-              초
+              택시비: <span>약 {routeResult.tax}원</span>
+            </p>
+            {routeResult.toll > 0 && (
+              <p>
+                톨게이트비: <span>약 {routeResult.toll}원</span>
+              </p>
+            )}
+            <p>
+              거리: <span>약 {routeResult.distance}m</span>
+            </p>
+            <p>
+              시간:{" "}
+              <span>
+                약 {routeResult.duration_min}분 {routeResult.duration_sec}초
+              </span>
             </p>
           </div>
         ) : (
-          <h5>Copyrights 2024 All rights reserved. 11 Dec 2024.</h5>
+          <h3>Copyrights 2024 All rights reserved. 11 Dec 2024.</h3>
         )}
       </div>
 
       <Modal
-        isOpen={isModalOpen}
-        onClose={closeModal}
+        isOpen={isPlaceModalOpen}
+        onClose={closePlaceModal}
         title={selectedPlace ? selectedPlace.name : "장소 정보"}
       >
         {reviews.length > 0 && (
@@ -693,6 +903,104 @@ function MainPage({ loggedInUser, handleLogout }) {
 
         {reviews.length === 0 && menus.length === 0 && <p>정보가 없습니다.</p>}
       </Modal>
+
+      <RouteModal isOpen={isRouteModalOpen} onClose={closeModal}>
+        <div className="search-container">
+          <input
+            type="text"
+            placeholder="검색어"
+            value={routeKeyword}
+            onChange={(e) => setRouteKeyword(e.target.value)}
+            className="search-modal-input"
+          />
+          <button
+            onClick={() => handleRouteSearch(routeKeyword)}
+            className="search-button"
+          >
+            검색
+          </button>
+        </div>
+        <div>
+          {routeKeywordResult.length === 0 && (
+            <>
+              <select onChange={handleCategoryChange} value={selectedCategory}>
+                <option value="상위">상위 카테고리 선택</option>
+                <option value="food">음식점</option>
+                <option value="카페">카페</option>
+                <option value="명소">명소</option>
+              </select>
+              {selectedCategory === "food" && (
+                <select
+                  onChange={handleCategoryChange}
+                  value={selectedCategory}
+                >
+                  <option value="세부">세부 카테고리 선택</option>
+                  {subCategories.food.map((sub) => (
+                    <option key={sub.value} value={sub.value}>
+                      {sub.label}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </>
+          )}
+          <button
+            className="search-button"
+            onClick={() => {
+              setRouteKeywordResult([]);
+            }}
+          >
+            결과 없애기
+          </button>
+        </div>
+        {routeKeywordResult.length == 0 &&
+          (selectedCategory === "카페" ||
+            selectedCategory === "명소" ||
+            selectedCategory === "한식" ||
+            selectedCategory === "일식" ||
+            selectedCategory === "중식" ||
+            selectedCategory === "양식" ||
+            selectedCategory === "아시아식" ||
+            selectedCategory === "주점" ||
+            selectedCategory === "기타") && (
+            <div className="recommend-container">
+              <p style={{ textAlign: "center" }}>
+                어떤 방식으로 장소를 추천받으시겠어요?
+              </p>
+              <button
+                className="recommend-button"
+                onClick={() => handleRecommendSimilarPlace(selectedCategory)}
+              >
+                선택한 카테고리와 현 위치를 중심으로 추천받기
+              </button>
+              <button
+                className="recommend-button"
+                onClick={() =>
+                  handleRecommendCollaborativePlace(selectedCategory)
+                }
+              >
+                나와 취향이 비슷한 사람이 갔던 장소를 중심으로 추천받기
+              </button>
+              <button
+                className="recommend-button"
+                onClick={handleRecommendClusterPlace}
+              >
+                내가 즐겨 찾는 장소 중심으로 추천받기
+              </button>
+            </div>
+          )}
+        {routeKeywordResult.map((routeKeyword, index) => {
+          return (
+            <div
+              key={index}
+              onClick={() => handleRouteCourse(routeKeyword)}
+              className="route-keyword-item"
+            >
+              <h3>{routeKeyword.name}</h3>
+            </div>
+          );
+        })}
+      </RouteModal>
     </div>
   );
 }
