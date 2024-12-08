@@ -13,6 +13,16 @@ function LoginPage({
   return (
     <div className="login-container">
       <div className="login-box">
+        <img
+          src="images/logo.png"
+          alt="Logo"
+          style={{
+            width: "100px",
+            height: "100px",
+            marginLeft: "100px",
+            marginBottom: "-20px",
+          }}
+        />
         <h2 className="login-text">Login</h2>
         <div>
           <input
