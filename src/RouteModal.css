@@ -1,0 +1,65 @@
+.route-modal-overlay {
+  position: fixed;
+  top: 14.5%;
+  left: 75%; 
+  transform: translate(-130%, 0); 
+  width: 25%;
+  height: 70vh;
+  border-radius: 12px;
+  box-shadow: none;
+  background: rgba(255, 255, 255, 1);
+  z-index: 1000;
+  overflow-y: auto;
+}
+
+  
+  .route-modal-content {
+    padding: 20px; 
+    border-radius: 12px;
+    background-color: #fff;
+    animation : fadeIn 0.3s ease;
+  }
+  
+  .route-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px; 
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 10px; 
+  }
+    
+    .route-modal-header h2 {
+      margin: 0;
+      font-size: 20px;
+    }
+    
+    .close-button {
+      background: none;
+      border: none; 
+      font-size: 18px;
+      cursor: pointer;
+      color: #666;
+    }
+    
+    .close-button:hover {
+      color: #000;
+    }
+    
+    .route-modal-body {
+      font-size: 16px;
+      color: #333;
+      line-height: 1.5;
+    }
+  
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: scale(0.9);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+    
