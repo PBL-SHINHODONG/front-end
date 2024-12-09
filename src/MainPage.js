@@ -5,6 +5,7 @@ import axios from "axios";
 import "./MainPage.css";
 import Modal from "./Modal.js";
 import RouteModal from "./RouteModal.js";
+import InfoModal from "./InfoModal.js";
 import useGeolocation from "./hooks/useGeolocation";
 
 function MainPage({ loggedInUser, handleLogout }) {
@@ -22,7 +23,6 @@ function MainPage({ loggedInUser, handleLogout }) {
   const [isLogin, setIsLogin] = useState(false);
   const [userId, setUserId] = useState(0);
   const [showSelect, setShowSelect] = useState(false);
-  const [NotVisit, setNotVisit] = useState(false);
   const [isPlaceModalOpen, setIsPlaceModalOpen] = useState(false);
   const [selectedOption, setSelectedOption] = useState("option1");
   const [selectedPlace, setSelectedPlace] = useState(null);
@@ -48,6 +48,7 @@ function MainPage({ loggedInUser, handleLogout }) {
   const [routeKeywordResult, setRouteKeywordResult] = useState([]);
   const [courseCoordinates, setCourseCoordinates] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(false);
+  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const searchTimeout = useRef();
 
   const handleCategoryChange = (e) => {
@@ -265,6 +266,13 @@ function MainPage({ loggedInUser, handleLogout }) {
     setIsRouteModalOpen(false);
   };
 
+  const openInfoModal = () => {
+    setIsInfoModalOpen(true);
+  };
+
+  const closeInfoModal = () => {
+    setIsInfoModalOpen(false);
+  };
   const handleCourse = () => {
     setIsFetchRoute(true);
   };
@@ -446,7 +454,8 @@ function MainPage({ loggedInUser, handleLogout }) {
         const errorMessage = JSON.parse(error.response.request.response);
         if (errorMessage.detail === "No visited places found for this user") {
           setPlaces([]);
-          setNotVisit(true);
+          alert("기록된 즐겨찾기 장소가 없습니다.");
+          handleFetchData();
         } else {
           console.error("Error:", errorMessage.detail);
         }
@@ -643,9 +652,18 @@ function MainPage({ loggedInUser, handleLogout }) {
                   </div>
                 )}
             </div>
-            <button className="logout-button" onClick={handleLogout}>
-              로그아웃
-            </button>
+            <div>
+              <button
+                className="logout-button"
+                style={{ marginRight: "10px" }}
+                onClick={() => openInfoModal()}
+              >
+                사용방법
+              </button>
+              <button className="logout-button" onClick={handleLogout}>
+                로그아웃
+              </button>
+            </div>
           </>
         ) : (
           <h2>로그인 해주세요.</h2>
@@ -695,8 +713,6 @@ function MainPage({ loggedInUser, handleLogout }) {
             <div className="loading-message">
               <p>로딩 중입니다...</p>
             </div>
-          ) : NotVisit ? (
-            <p>기록되어 있는 즐겨찾기가 없습니다.</p>
           ) : isFetchRoute ? (
             <div className="main-content-place">
               {routeCourse.map((course, index) => (
@@ -934,7 +950,7 @@ function MainPage({ loggedInUser, handleLogout }) {
                 className="recommend-button"
                 onClick={handleRecommendClusterPlace}
               >
-                내가 즐겨 찾는 장소 중심으로 추천받기
+                대구 명소 추천받기
               </button>
             </div>
           )}
@@ -950,6 +966,20 @@ function MainPage({ loggedInUser, handleLogout }) {
           );
         })}
       </RouteModal>
+      <InfoModal isOpen={isInfoModalOpen} onClose={closeInfoModal}>
+        <div>
+          <img
+            src="images/detail1.png"
+            style={{ width: "90%", height: "auto" }}
+            alt="detail1"
+          />
+          <img
+            src="images/detail2.png"
+            style={{ width: "90%", height: "auto" }}
+            alt="detail2"
+          />
+        </div>
+      </InfoModal>
     </div>
   );
 }
