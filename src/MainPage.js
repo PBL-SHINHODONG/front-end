@@ -47,25 +47,8 @@ function MainPage({ loggedInUser, handleLogout }) {
   const [routeKeyword, setRouteKeyword] = useState("");
   const [routeKeywordResult, setRouteKeywordResult] = useState([]);
   const [courseCoordinates, setCourseCoordinates] = useState([]);
-  const [selectedCategory, setSelectedCategory] = useState(false);
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const searchTimeout = useRef();
-
-  const handleCategoryChange = (e) => {
-    setSelectedCategory(e.target.value);
-  };
-
-  const subCategories = {
-    food: [
-      { value: "한식", label: "한식" },
-      { value: "일식", label: "일식" },
-      { value: "중식", label: "중식" },
-      { value: "양식", label: "양식" },
-      { value: "아시아식", label: "아시아식" },
-      { value: "주점", label: "주점" },
-      { value: "미분류", label: "기타" },
-    ],
-  };
 
   const handleResize = () => {
     setIsMobile(window.innerWidth <= 768);
@@ -541,10 +524,10 @@ function MainPage({ loggedInUser, handleLogout }) {
     setRouteCourse((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleRecommendSimilarPlace = async (selectedCategory) => {
+  const handleRecommendSimilarPlace = async () => {
     try {
       const response = await axios.post(
-        `http://ec2-13-125-211-97.ap-northeast-2.compute.amazonaws.com:5000/places/recommend/content/${selectedCategory}?page=1&size=50`,
+        `http://ec2-13-125-211-97.ap-northeast-2.compute.amazonaws.com:5000/places/recommend/content/good?page=1&size=50`,
         {
           user_id: userId,
           latitude: location.coordinates.lat,
@@ -564,10 +547,10 @@ function MainPage({ loggedInUser, handleLogout }) {
     }
   };
 
-  const handleRecommendCollaborativePlace = async (selectedCategory) => {
+  const handleRecommendCollaborativePlace = async () => {
     try {
       const response = await axios.post(
-        `http://ec2-13-125-211-97.ap-northeast-2.compute.amazonaws.com:5000/places/recommend/collaborative/${selectedCategory}?page=1&size=50`,
+        `http://ec2-13-125-211-97.ap-northeast-2.compute.amazonaws.com:5000/places/recommend/collaborative/good?page=1&size=50`,
         {
           user_id: userId,
           latitude: location.coordinates.lat,
@@ -584,7 +567,7 @@ function MainPage({ loggedInUser, handleLogout }) {
       setRouteKeywordResult(result);
     } catch (error) {
       if (error.response.data.detail === "places not found") {
-        alert("추천된 장소가 없습니다. 다른 카테고리로 지정해주세요.");
+        alert("추천된 장소가 없습니다.");
       }
       console.error("Error getting places by category:", error);
     }
@@ -886,29 +869,6 @@ function MainPage({ loggedInUser, handleLogout }) {
           </button>
         </div>
         <div>
-          {routeKeywordResult.length === 0 && (
-            <>
-              <select onChange={handleCategoryChange} value={selectedCategory}>
-                <option value="상위">상위 카테고리 선택</option>
-                <option value="food">음식점</option>
-                <option value="카페">카페</option>
-                <option value="명소">명소</option>
-              </select>
-              {selectedCategory === "food" && (
-                <select
-                  onChange={handleCategoryChange}
-                  value={selectedCategory}
-                >
-                  <option value="세부">세부 카테고리 선택</option>
-                  {subCategories.food.map((sub) => (
-                    <option key={sub.value} value={sub.value}>
-                      {sub.label}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </>
-          )}
           <button
             className="search-button"
             onClick={() => {
@@ -918,42 +878,31 @@ function MainPage({ loggedInUser, handleLogout }) {
             결과 없애기
           </button>
         </div>
-        {routeKeywordResult.length == 0 &&
-          (selectedCategory === "카페" ||
-            selectedCategory === "명소" ||
-            selectedCategory === "한식" ||
-            selectedCategory === "일식" ||
-            selectedCategory === "중식" ||
-            selectedCategory === "양식" ||
-            selectedCategory === "아시아식" ||
-            selectedCategory === "주점" ||
-            selectedCategory === "기타") && (
-            <div className="recommend-container">
-              <p style={{ textAlign: "center" }}>
-                어떤 방식으로 장소를 추천받으시겠어요?
-              </p>
-              <button
-                className="recommend-button"
-                onClick={() => handleRecommendSimilarPlace(selectedCategory)}
-              >
-                선택한 카테고리와 현 위치를 중심으로 추천받기
-              </button>
-              <button
-                className="recommend-button"
-                onClick={() =>
-                  handleRecommendCollaborativePlace(selectedCategory)
-                }
-              >
-                나와 취향이 비슷한 사람이 갔던 장소를 중심으로 추천받기
-              </button>
-              <button
-                className="recommend-button"
-                onClick={handleRecommendClusterPlace}
-              >
-                대구 명소 추천받기
-              </button>
-            </div>
-          )}
+        {routeKeywordResult.length == 0 && (
+          <div className="recommend-container">
+            <p style={{ textAlign: "center" }}>
+              어떤 방식으로 장소를 추천받으시겠어요?
+            </p>
+            <button
+              className="recommend-button"
+              onClick={() => handleRecommendSimilarPlace()}
+            >
+              선택한 카테고리와 현 위치를 중심으로 추천받기
+            </button>
+            <button
+              className="recommend-button"
+              onClick={() => handleRecommendCollaborativePlace()}
+            >
+              나와 취향이 비슷한 사람이 갔던 장소를 중심으로 추천받기
+            </button>
+            <button
+              className="recommend-button"
+              onClick={handleRecommendClusterPlace}
+            >
+              대구 명소 추천받기
+            </button>
+          </div>
+        )}
         {routeKeywordResult.map((routeKeyword, index) => {
           return (
             <div
